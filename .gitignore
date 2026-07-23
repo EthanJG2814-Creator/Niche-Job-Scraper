@@ -1,5 +1,6 @@
 # Byte-compiled / cache files
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -14,10 +15,10 @@ env.bak/
 # VS Code settings
 .vscode/
 
-# Databases / local data (optional — keep if you don’t want job_data.db tracked)
+# Databases / local data (optional — uncomment if you DON’T want this in Git)
 # job_data.db
 
-# Chrome profile directory (rename if your folder is different)
+# Chrome profile directory (adjust name if your folder is different)
 chrome_profile/
 
 # OS junk files
