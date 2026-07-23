@@ -1,0 +1,2 @@
+# Required: set your local chromedriver path.
+CHROMEDRIVER_PATH = /home/ethanjg/Documents/Project Folder/Automatic Bank Tracking/vs_code/web_Reader/chromedriver

@@ -1,0 +1,12 @@
+USAJOBS will be our first target. https://www.usajobs.gov/
+if you have may notice, you need to enter a title or location 
+inorder to query about job postings. in this case i will use San Antonio
+Texas as our first test subject.
+https://www.usajobs.gov/search/results/?l=San+Antonio%2C+Texas&p=1&r=25
+
+you dont need to be a genious to see that the link has a basic structure to it, you can see
+that r=25 is how far we want the job to be. p=1 is the current page number we are on.
+
+In this case we will set r=100 for a 100 mile radious of the city, and we will also 
+itterate though p until we reach our limit. 
+#---------------------------------------------------------------------------------------------
