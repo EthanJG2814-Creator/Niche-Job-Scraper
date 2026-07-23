@@ -126,6 +126,19 @@ def human_pause(min_s: float = 0.8, max_s: float = 2.4) -> None:
 	time.sleep(random.uniform(min_s, max_s))
 
 
+def typing(input_text, section) -> None:
+	print("Executing typing")
+	for char in input_text:
+		section.send_keys(char)
+		time.sleep(random.uniform(0.1, 0.3))
+
+
+def random_wait(min_seconds: int = 5, max_seconds: int = 10) -> None:
+	wait_time = random.randint(min_seconds, max_seconds)
+	print(f"Waiting {wait_time} seconds...")
+	time.sleep(wait_time)
+
+
 def build_chrome_options(
 	chrome_binary_location: str = DEFAULT_CHROME_BINARY,
 	window_size: Optional[Tuple[int, int]] = DEFAULT_WINDOW_SIZE,
@@ -247,7 +260,10 @@ def create_driver(
 	return driver
 
 
-def run_scraper(target_url: str,extra_headers: Optional[Dict[str, str]] = None,) -> webdriver.Chrome:
+def run_scraper(
+	target_url: str,
+	extra_headers: Optional[Dict[str, str]] = None,
+) -> webdriver.Chrome:
 	print("About to create driver...")
 	driver = create_driver(extra_headers=extra_headers)
 	print("Driver created, about to open URL...")
@@ -257,7 +273,18 @@ def run_scraper(target_url: str,extra_headers: Optional[Dict[str, str]] = None,)
 
 
 if __name__ == "__main__":
-	from website_scraper.USAJOBS import TARGET_URL
-	from website_scraper.wiki_test import wiki_url
+	from website_scraper.wiki_test import run_wiki_test, wiki_url
 
-	run_scraper(wiki_url)
+	user_query = input("What do you want to search on Wikipedia? ").strip()
+	if not user_query:
+		user_query = "Selenium (software)"
+
+	driver = run_scraper(wiki_url)
+	result = run_wiki_test(
+		driver,
+		query=user_query,
+		typing_func=typing,
+		random_wait_func=random_wait,
+	)
+	print(f"Main orchestrator wiki test result: {result}")
+	driver.quit()
