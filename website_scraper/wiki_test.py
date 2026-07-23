@@ -30,12 +30,77 @@ def log_wiki_test_run(page_title,db_path: Path = WIKI_TEST_DB,) -> None:
 		conn.commit()
 
 
+def get_visible_wiki_links(driver) -> list:
+	visible_links = []
+	for anchor in driver.find_elements(By.CSS_SELECTOR, "a[rel='mw:WikiLink'][href]"):
+		try:
+			if not anchor.is_displayed():
+				continue
+			rel_value = (anchor.get_attribute("rel") or "").strip()
+			if rel_value != "mw:WikiLink":
+				continue
+			href = (anchor.get_attribute("href") or "").strip()
+			if not href or href.startswith("javascript:"):
+				continue
+			visible_links.append(anchor)
+		except Exception:
+			continue
+	return visible_links
+
+
+def get_current_wiki_article_title(driver) -> str:
+	try:
+		title_element = WebDriverWait(driver, 8).until(
+			EC.presence_of_element_located((By.CSS_SELECTOR, "#firstHeading .mw-page-title-main"))
+		)
+		return title_element.text.strip() or driver.title or driver.current_url
+	except Exception:
+		fallback_title = (driver.title or "").strip()
+		return fallback_title or driver.current_url
+
+
+def click_random_visible_wiki_link(
+	driver,
+	wait: WebDriverWait,
+	random_wait_func: Optional[Callable[[], None]] = None,
+	max_attempts: int = 6,
+) -> bool:
+	for _ in range(max_attempts):
+		visible_links = get_visible_wiki_links(driver)
+		if not visible_links:
+			return False
+
+		candidate = random.choice(visible_links)
+		before_url = driver.current_url
+		try:
+			driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", candidate)
+			driver.execute_script("arguments[0].click();", candidate)
+		except Exception:
+			continue
+
+		try:
+			wait.until(lambda d: d.current_url != before_url)
+		except Exception:
+			continue
+
+		page_title = get_current_wiki_article_title(driver)
+		log_wiki_test_run(page_title)
+
+		if random_wait_func:
+			random_wait_func()
+		return True
+
+	return False
+
+
 def run_wiki_test(
 	driver,
 	query: str = "Selenium (software)",
 	typing_func: Optional[Callable[[str, object], None]] = None,
 	random_wait_func: Optional[Callable[[], None]] = None,
 	scroll_func: Optional[Callable[[object], None]] = None,
+	min_repeats: int = 3,
+	max_repeats: int = 7,
 ) -> bool:
 	print("Running Wikipedia site as an initial test...")
 
@@ -64,14 +129,26 @@ def run_wiki_test(
 		if random_wait_func:
 			random_wait_func()
 
-		if scroll_func:
-			scroll_func(driver)
+		# Log the initial article opened from the search.
+		initial_title = get_current_wiki_article_title(driver)
+		log_wiki_test_run(initial_title)
 
-		title_element = wait.until(
-			EC.presence_of_element_located((By.CSS_SELECTOR, "#firstHeading .mw-page-title-main"))
-		)
-		page_title = title_element.text.strip() or driver.title
-		log_wiki_test_run(page_title)
+		repeat_count = random.randint(min_repeats, max_repeats)
+		print(f"This session will repeat the scroll and click flow {repeat_count} time(s).")
+
+		for step in range(repeat_count):
+			if scroll_func:
+				scroll_func(driver)
+
+			clicked = click_random_visible_wiki_link(
+				driver,
+				wait,
+				random_wait_func=random_wait_func,
+			)
+			if not clicked:
+				print(f"Step {step + 1}: no clickable visible wiki links found, stopping early.")
+				break
+
 		print("Wikipedia test passed: search opened an article page.")
 		return True
 	except Exception as exc:

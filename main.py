@@ -255,14 +255,16 @@ def _smooth_scroll(
 	driver: webdriver.Chrome,
 	direction: int,
 	target_distance: int,
+	pixels_per_second: int,
 	step_delay_ms: int,
 	max_steps: int,
 ) -> None:
 	script = """
 		const direction = arguments[0];
 		const targetDistance = arguments[1];
-		const stepDelayMs = arguments[2];
-		const maxSteps = arguments[3];
+		const pixelsPerSecond = arguments[2];
+		const stepDelayMs = arguments[3];
+		const maxSteps = arguments[4];
 		const callback = arguments[arguments.length - 1];
 
 		const startY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
@@ -278,7 +280,6 @@ def _smooth_scroll(
 			return;
 		}
 
-		const pixelsPerSecond = 4600
 		const duration = Math.max(300, Math.min(2500, (distance / pixelsPerSecond) * 1000));
 		const startTime = performance.now();
 
@@ -300,7 +301,7 @@ def _smooth_scroll(
 		requestAnimationFrame(tick);
 	"""
 	try:
-		driver.execute_async_script(script, direction, target_distance, step_delay_ms, max_steps)
+		driver.execute_async_script(script, direction, target_distance, pixels_per_second, step_delay_ms, max_steps)
 	except (InvalidSessionIdException, WebDriverException):
 		pass
 
@@ -320,9 +321,18 @@ def scroll_page(
 			break
 
 		step_delay_ms = 0
-		target_distance = random.randint(500, 1100)
-		_smooth_scroll(driver, direction=1, target_distance=target_distance, step_delay_ms=step_delay_ms, max_steps=15)
-		random_wait(min_seconds=2.0, max_seconds=3.0)
+		target_distance = random.randint(500, 800)
+		pixels_per_second = random.randint(3000, 4000)
+		print('Scrolling now...')
+		_smooth_scroll(
+			driver,
+			direction=1,
+			target_distance=target_distance,
+			pixels_per_second=pixels_per_second,
+			step_delay_ms=step_delay_ms,
+			max_steps=15,
+		)
+		random_wait(min_seconds=0.2, max_seconds=2)
 
 		if _is_bottom_of_page(driver):
 			bottom_of_page = True
@@ -339,8 +349,16 @@ def scroll_page(
 
 			step_delay_ms = 0
 			target_distance = random.randint(250, 700)
-			_smooth_scroll(driver, direction=-1, target_distance=target_distance, step_delay_ms=step_delay_ms, max_steps=12)
-			random_wait(min_seconds=2.0, max_seconds=3.0)
+			pixels_per_second = random.randint(3001, 3999)
+			_smooth_scroll(
+				driver,
+				direction=-1,
+				target_distance=target_distance,
+				pixels_per_second=pixels_per_second,
+				step_delay_ms=step_delay_ms,
+				max_steps=12,
+			)
+			random_wait(min_seconds=0.2, max_seconds=2)
 
 
 def create_driver(
