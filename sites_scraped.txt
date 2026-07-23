@@ -1,3 +1,16 @@
+The wikipedia test is a very simple test. depending on how you modify the code or how you execute the program
+the test is simple.
+1. it should load up chromium
+2. it should search wikipedia
+3. it should type a query into the wikipedia seracah board
+4. it should then load the page and document some information into the database under wiki data.
+
+if any of the test fails then there is something wrong with your scraper and it is potetnially being blocked by 
+the site, the site has change format, or the webpage did not exist and you will need to update or modify the code in your own way. 
+
+
+
+#------------------------------------------------------------------------------------------
 USAJOBS will be our first target. https://www.usajobs.gov/
 if you have may notice, you need to enter a title or location 
 inorder to query about job postings. in this case i will use San Antonio

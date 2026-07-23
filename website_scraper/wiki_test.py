@@ -35,6 +35,7 @@ def run_wiki_test(
 	query: str = "Selenium (software)",
 	typing_func: Optional[Callable[[str, object], None]] = None,
 	random_wait_func: Optional[Callable[[], None]] = None,
+	scroll_func: Optional[Callable[[object], None]] = None,
 ) -> bool:
 	print("Running Wikipedia site as an initial test...")
 
@@ -62,6 +63,9 @@ def run_wiki_test(
 		wait.until(EC.url_contains("/wiki/"))
 		if random_wait_func:
 			random_wait_func()
+
+		if scroll_func:
+			scroll_func(driver)
 
 		title_element = wait.until(
 			EC.presence_of_element_located((By.CSS_SELECTOR, "#firstHeading .mw-page-title-main"))

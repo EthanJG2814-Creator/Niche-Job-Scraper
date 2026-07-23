@@ -2,6 +2,7 @@ import random
 import time
 import sqlite3
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -41,6 +42,15 @@ db_path = os.path.join(BASE_DIR, 'job_data.db')
 connection = sqlite3.connect(db_path)
 cursor = connection.cursor()
 #-----------------------------------------------------------------------------------------
+
+
+def _seed_randomness() -> None:
+	# Use the current timestamp so each run gets a slightly different pattern.
+	seed_value = int(datetime.now().timestamp() * 1000)
+	random.seed(seed_value)
+
+
+_seed_randomness()
 
 
 def get_service_config() -> tuple[str, Dict[str, str]]:
@@ -134,21 +144,16 @@ def sanitize_headers(headers: Dict[str, str]) -> Dict[str, str]:
 		cleaned[key] = value
 	return cleaned
 
-
-def human_pause(min_s: float = 0.8, max_s: float = 2.4) -> None:
-	time.sleep(random.uniform(min_s, max_s))
-
-
 def typing(input_text, section) -> None:
 	print("Executing typing")
 	for char in input_text:
 		section.send_keys(char)
-		time.sleep(random.uniform(0.1, 0.3))
+		time.sleep(round(random.uniform(0.080, 0.320), 3))
 
 
-def random_wait(min_seconds: int = 5, max_seconds: int = 10) -> None:
-	wait_time = random.randint(min_seconds, max_seconds)
-	print(f"Waiting {wait_time} seconds...")
+def random_wait(min_seconds: float = 0.5, max_seconds: float = 3.0) -> None:
+	wait_time = round(random.uniform(min_seconds, max_seconds), 3)
+	print(f"Waiting {wait_time:.3f} seconds...")
 	time.sleep(wait_time)
 
 
@@ -225,27 +230,117 @@ def apply_default_headers(driver: webdriver.Chrome, headers: Dict[str, str]) -> 
 
 
 def safe_get(driver: webdriver.Chrome, url: str) -> None:
-	human_pause(0.5, 1.6)
+	random_wait()
 	driver.get(url)
-	human_pause(1.0, 2.2)
+	random_wait()
 
 
-def scroll_page(driver: webdriver.Chrome, min_scrolls: int = 2, max_scrolls: int = 5) -> None:
-	scrolls = random.randint(min_scrolls, max_scrolls)
-	for _ in range(scrolls):
-		step = random.randint(300, 900)
-		try:
-			driver.execute_script("window.scrollBy(0, arguments[0]);", step)
-		except (InvalidSessionIdException, WebDriverException):
-			# If the browser process drops, skip warm behavior instead of crashing the run.
+def _is_bottom_of_page(driver: webdriver.Chrome, threshold: float = 0.98) -> bool:
+	try:
+		scroll_height = driver.execute_script(
+			"return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight);"
+		)
+		viewport_height = driver.execute_script(
+			"return window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;"
+		)
+		scroll_top = driver.execute_script(
+			"return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;"
+		)
+		return (scroll_top + viewport_height) >= (scroll_height * threshold)
+	except (InvalidSessionIdException, WebDriverException):
+		return True
+
+
+def _smooth_scroll(
+	driver: webdriver.Chrome,
+	direction: int,
+	target_distance: int,
+	step_delay_ms: int,
+	max_steps: int,
+) -> None:
+	script = """
+		const direction = arguments[0];
+		const targetDistance = arguments[1];
+		const stepDelayMs = arguments[2];
+		const maxSteps = arguments[3];
+		const callback = arguments[arguments.length - 1];
+
+		const startY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+		const maxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+		const targetY = direction > 0
+			? Math.min(startY + targetDistance, maxScrollY)
+			: Math.max(startY - targetDistance, 0);
+
+		const distance = Math.max(0, Math.abs(targetY - startY));
+		if (distance <= 1) {
+			window.scrollTo(0, targetY);
+			callback();
+			return;
+		}
+
+		const pixelsPerSecond = 4600
+		const duration = Math.max(300, Math.min(2500, (distance / pixelsPerSecond) * 1000));
+		const startTime = performance.now();
+
+		function tick(now) {
+			const elapsed = now - startTime;
+			const travelDistance = Math.min(distance, (elapsed / 1000) * pixelsPerSecond);
+			const currentY = Math.round(startY + (direction > 0 ? travelDistance : -travelDistance));
+
+			window.scrollTo(0, currentY);
+
+			if (travelDistance < distance) {
+				requestAnimationFrame(tick);
+			} else {
+				window.scrollTo(0, targetY);
+				callback();
+			}
+		}
+
+		requestAnimationFrame(tick);
+	"""
+	try:
+		driver.execute_async_script(script, direction, target_distance, step_delay_ms, max_steps)
+	except (InvalidSessionIdException, WebDriverException):
+		pass
+
+
+def scroll_page(
+	driver: webdriver.Chrome,
+	min_pause: float = 0.2,
+	max_pause: float = 2.0,
+	scroll_up_min: int = 3,
+	scroll_up_max: int = 5
+) -> None:
+	# Keep scrolling smoothly until the bottom of the page is reached.
+	bottom_of_page = False
+	while not bottom_of_page:
+		if _is_bottom_of_page(driver):
+			bottom_of_page = True
 			break
-		human_pause(0.4, 1.3)
 
+		step_delay_ms = 0
+		target_distance = random.randint(500, 1100)
+		_smooth_scroll(driver, direction=1, target_distance=target_distance, step_delay_ms=step_delay_ms, max_steps=15)
+		random_wait(min_seconds=2.0, max_seconds=3.0)
 
-def warm_page(driver: webdriver.Chrome) -> None:
-	human_pause(0.8, 1.8)
-	scroll_page(driver)
-	human_pause(1.0, 2.0)
+		if _is_bottom_of_page(driver):
+			bottom_of_page = True
+
+	if bottom_of_page:
+		random_up_scrolls = random.randint(scroll_up_min,scroll_up_max)
+		print('The program will begin to scroll up now')
+		for _ in range(random_up_scrolls):
+			current_top = driver.execute_script(
+				"return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;"
+			)
+			if current_top <= 0:
+				break
+
+			step_delay_ms = 0
+			target_distance = random.randint(250, 700)
+			_smooth_scroll(driver, direction=-1, target_distance=target_distance, step_delay_ms=step_delay_ms, max_steps=12)
+			random_wait(min_seconds=2.0, max_seconds=3.0)
 
 
 def create_driver(
@@ -281,7 +376,6 @@ def run_scraper(
 	driver = create_driver(extra_headers=extra_headers)
 	print("Driver created, about to open URL...")
 	safe_get(driver, target_url)
-	warm_page(driver)
 	return driver
 
 
@@ -301,8 +395,12 @@ if __name__ == "__main__":
 			query=user_query,
 			typing_func=typing,
 			random_wait_func=random_wait,
+			scroll_func=scroll_page,
 		)
 		print(f"Main orchestrator wiki test result: {result}")
-		driver.quit()
+		random_wait()
+		print('Thank you for using wiki test...')
+		random_wait()
+		#driver.quit()
 	else:
 		print("Skipping Wikipedia test.")
