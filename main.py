@@ -1,5 +1,7 @@
 import random
 import time
+import sqlite3
+import os
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -28,6 +30,17 @@ BLOCKED_HEADER_NAMES = {
 	"via",
 	"x-forwarded-for",
 }
+
+
+#--------------------- Connecting with the local database! ---------------------------------------
+# we go ahead and build the file path
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(BASE_DIR, 'job_data.db')
+
+# establish a connection with the database with query abilities
+connection = sqlite3.connect(db_path)
+cursor = connection.cursor()
+#-----------------------------------------------------------------------------------------
 
 
 def get_service_config() -> tuple[str, Dict[str, str]]:
@@ -275,16 +288,21 @@ def run_scraper(
 if __name__ == "__main__":
 	from website_scraper.wiki_test import run_wiki_test, wiki_url
 
-	user_query = input("What do you want to search on Wikipedia? ").strip()
-	if not user_query:
-		user_query = "Selenium (software)"
+	user_choice = input("Would you like to run the Wikipedia test? (Y/N) ").strip().upper()
 
-	driver = run_scraper(wiki_url)
-	result = run_wiki_test(
-		driver,
-		query=user_query,
-		typing_func=typing,
-		random_wait_func=random_wait,
-	)
-	print(f"Main orchestrator wiki test result: {result}")
-	driver.quit()
+	if user_choice == "Y":
+		user_query = input("What do you want to search on Wikipedia? ").strip()
+		if not user_query:
+			user_query = "Selenium (software)"
+
+		driver = run_scraper(wiki_url)
+		result = run_wiki_test(
+			driver,
+			query=user_query,
+			typing_func=typing,
+			random_wait_func=random_wait,
+		)
+		print(f"Main orchestrator wiki test result: {result}")
+		driver.quit()
+	else:
+		print("Skipping Wikipedia test.")

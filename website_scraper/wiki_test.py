@@ -1,5 +1,8 @@
+import sqlite3
 import random
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import Callable, Optional
 
 from selenium.webdriver.common.by import By
@@ -7,6 +10,24 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 wiki_url = "https://www.wikipedia.org/"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+WIKI_TEST_DB = PROJECT_ROOT / "job_data.db"
+
+
+def log_wiki_test_run(page_title,db_path: Path = WIKI_TEST_DB,) -> None:
+	now = datetime.now()
+	run_date = now.strftime("%Y-%m-%d")
+	run_time = now.strftime("%H:%M:%S")
+	print('we stored the following information into the database:')
+	print(f'Date of Execution: {run_date}')
+	print(f'Time of Execution: {run_time}')
+	print(f'Wiki Title Page: {page_title}')
+	with sqlite3.connect(db_path) as conn:
+		conn.execute(
+			"INSERT OR IGNORE INTO \"wiki data\" (\"Date\", \"Time\", \"Page_Titles\") VALUES (?, ?, ?)",
+			(run_date, run_time, page_title),
+		)
+		conn.commit()
 
 
 def run_wiki_test(
@@ -39,7 +60,14 @@ def run_wiki_test(
 		search_input.submit()
 
 		wait.until(EC.url_contains("/wiki/"))
-		random_wait_func()
+		if random_wait_func:
+			random_wait_func()
+
+		title_element = wait.until(
+			EC.presence_of_element_located((By.CSS_SELECTOR, "#firstHeading .mw-page-title-main"))
+		)
+		page_title = title_element.text.strip() or driver.title
+		log_wiki_test_run(page_title)
 		print("Wikipedia test passed: search opened an article page.")
 		return True
 	except Exception as exc:
