@@ -179,9 +179,17 @@ def build_chrome_options(
 	# Let Chrome choose an available debugging port to avoid stale port conflicts.
 	chrome_options.add_argument("--remote-debugging-port=0")
 	chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-	chrome_options.add_argument("--disable-images")
+	#chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+	#chrome_options.add_argument("--disable-images")
 	chrome_options.add_argument("--disable-plugins")
 	chrome_options.add_argument("--disable-extensions")
+	chrome_options.add_experimental_option(
+		"prefs",
+		{
+			"profile.managed_default_content_settings.images": 1,
+			"profile.default_content_setting_values.images": 1,
+		},
+	)
 	chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 	chrome_options.add_experimental_option("useAutomationExtension", False)
 	return chrome_options
@@ -233,6 +241,38 @@ def safe_get(driver: webdriver.Chrome, url: str) -> None:
 	random_wait()
 	driver.get(url)
 	random_wait()
+
+
+def get_network_performance_kb(driver: webdriver.Chrome) -> int:
+	"""Return estimated transferred bytes for the current page in kilobytes."""
+	try:
+		total_bytes = driver.execute_script(
+			"""
+			const navEntries = performance.getEntriesByType('navigation') || [];
+			const resourceEntries = performance.getEntriesByType('resource') || [];
+
+			let bytes = 0;
+			for (const entry of navEntries) {
+				if (entry.transferSize && entry.transferSize > 0) {
+					bytes += entry.transferSize;
+				}
+			}
+
+			for (const entry of resourceEntries) {
+				if (entry.transferSize && entry.transferSize > 0) {
+					bytes += entry.transferSize;
+				}
+			}
+
+			return Math.round(bytes);
+			"""
+		)
+		total_kb = int(round((total_bytes or 0) / 1024))
+		print(f"Estimated network transfer for page: {total_kb} kB")
+		return max(0, total_kb)
+	except (InvalidSessionIdException, WebDriverException, TypeError, ValueError):
+		print("Estimated network transfer for page: 0 kB")
+		return 0
 
 
 def _is_bottom_of_page(driver: webdriver.Chrome, threshold: float = 0.98) -> bool:
@@ -414,6 +454,7 @@ if __name__ == "__main__":
 			typing_func=typing,
 			random_wait_func=random_wait,
 			scroll_func=scroll_page,
+			network_performance_func=get_network_performance_kb,
 		)
 		print(f"Main orchestrator wiki test result: {result}")
 		random_wait()

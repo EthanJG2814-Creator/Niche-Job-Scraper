@@ -22,10 +22,39 @@ def log_wiki_test_run(page_title,db_path: Path = WIKI_TEST_DB,) -> None:
 	print(f'Date of Execution: {run_date}')
 	print(f'Time of Execution: {run_time}')
 	print(f'Wiki Title Page: {page_title}')
+	print('Network Performance: 0 kB')
 	with sqlite3.connect(db_path) as conn:
+		columns = [row[1] for row in conn.execute("PRAGMA table_info('wiki data')")]
+		if "Network_Performance" not in columns:
+			conn.execute("ALTER TABLE \"wiki data\" ADD Network_Performance integer")
 		conn.execute(
-			"INSERT OR IGNORE INTO \"wiki data\" (\"Date\", \"Time\", \"Page_Titles\") VALUES (?, ?, ?)",
-			(run_date, run_time, page_title),
+			"INSERT OR IGNORE INTO \"wiki data\" (\"Date\", \"Time\", \"Page_Titles\", \"Network_Performance\") VALUES (?, ?, ?, ?)",
+			(run_date, run_time, page_title, 0),
+		)
+		conn.commit()
+
+
+def log_wiki_page_with_network(
+	page_title: str,
+	network_performance_kb: int,
+	db_path: Path = WIKI_TEST_DB,
+) -> None:
+	now = datetime.now()
+	run_date = now.strftime("%Y-%m-%d")
+	run_time = now.strftime("%H:%M:%S")
+	network_value = max(0, int(network_performance_kb))
+	print('we stored the following information into the database:')
+	print(f'Date of Execution: {run_date}')
+	print(f'Time of Execution: {run_time}')
+	print(f'Wiki Title Page: {page_title}')
+	print(f'Network Performance: {network_value} kB')
+	with sqlite3.connect(db_path) as conn:
+		columns = [row[1] for row in conn.execute("PRAGMA table_info('wiki data')")]
+		if "Network_Performance" not in columns:
+			conn.execute("ALTER TABLE \"wiki data\" ADD Network_Performance integer")
+		conn.execute(
+			"INSERT OR IGNORE INTO \"wiki data\" (\"Date\", \"Time\", \"Page_Titles\", \"Network_Performance\") VALUES (?, ?, ?, ?)",
+			(run_date, run_time, page_title, network_value),
 		)
 		conn.commit()
 
@@ -63,6 +92,7 @@ def click_random_visible_wiki_link(
 	driver,
 	wait: WebDriverWait,
 	random_wait_func: Optional[Callable[[], None]] = None,
+	network_performance_func: Optional[Callable[[object], int]] = None,
 	max_attempts: int = 6,
 ) -> bool:
 	for _ in range(max_attempts):
@@ -84,7 +114,8 @@ def click_random_visible_wiki_link(
 			continue
 
 		page_title = get_current_wiki_article_title(driver)
-		log_wiki_test_run(page_title)
+		network_kb = network_performance_func(driver) if network_performance_func else 0
+		log_wiki_page_with_network(page_title, network_kb)
 
 		if random_wait_func:
 			random_wait_func()
@@ -99,6 +130,7 @@ def run_wiki_test(
 	typing_func: Optional[Callable[[str, object], None]] = None,
 	random_wait_func: Optional[Callable[[], None]] = None,
 	scroll_func: Optional[Callable[[object], None]] = None,
+	network_performance_func: Optional[Callable[[object], int]] = None,
 	min_repeats: int = 3,
 	max_repeats: int = 7,
 ) -> bool:
@@ -131,7 +163,8 @@ def run_wiki_test(
 
 		# Log the initial article opened from the search.
 		initial_title = get_current_wiki_article_title(driver)
-		log_wiki_test_run(initial_title)
+		initial_network_kb = network_performance_func(driver) if network_performance_func else 0
+		log_wiki_page_with_network(initial_title, initial_network_kb)
 
 		repeat_count = random.randint(min_repeats, max_repeats)
 		print(f"This session will repeat the scroll and click flow {repeat_count} time(s).")
@@ -144,6 +177,7 @@ def run_wiki_test(
 				driver,
 				wait,
 				random_wait_func=random_wait_func,
+				network_performance_func=network_performance_func,
 			)
 			if not clicked:
 				print(f"Step {step + 1}: no clickable visible wiki links found, stopping early.")

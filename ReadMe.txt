@@ -28,3 +28,10 @@ The thing i struggle with the most is what job
 do i want to apply to or what title or position
 do i look for?
 
+#-----------------------------------------------------------
+To get started just run main.py and you will be prompted
+with text and just follow the text. 
+
+    1. you will begin with wiki test, this will test your program to ensure
+    that everything i working corectly and sound. agree to run wiki_test and 
+    trouble shoot from any errors you encounter from there. 
