@@ -460,6 +460,20 @@ if __name__ == "__main__":
 		random_wait()
 		print('Thank you for using wiki test...')
 		random_wait()
-		#driver.quit()
+		driver.quit()
 	else:
 		print("Skipping Wikipedia test.")
+
+	print("Starting Scraper Search...")
+	from website_scraper.SWRI import SWRI_MAIN
+	from website_scraper.HEB import HEB_MAIN
+	from website_scraper.University_Health import Univeristy_Health_MAIN
+	driver = run_scraper("https://resapp.swri.org/ResApp/Job_Search_Results.aspx?EMPLOYMENT_STATUS=Salaried&WORK_LOCATION=San+Antonio%2c+Texas&JOB_CATEGORY=All+Categories")
+	try:
+		# SWRI_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
+		# safe_get(driver, "https://careers.heb.com/careers-home/jobs?stretchUnit=MILES&stretch=25&location=San%20Antonio,%20TX,%20United%20States&woe=7&regionCode=US&limit=10&page=1&sortBy=relevance")
+		# HEB_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
+		safe_get(driver,"https://careers.universityhealth.com/search-jobs")
+		Univeristy_Health_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
+	finally:
+		driver.quit()

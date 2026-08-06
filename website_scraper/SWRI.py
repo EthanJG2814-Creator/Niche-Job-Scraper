@@ -16,6 +16,11 @@ def extracting_info(driver,random_wait_func,network_performance_func,scroll_func
     table = driver.find_element(By.ID, "tblHistory")
     rows = table.find_elements(By.TAG_NAME, 'a')
     cached_rows = []
+    seen_links = set()
+    inserted_count = 0
+    skipped_current_list_count = 0
+    skipped_db_count = 0
+    skipped_empty_count = 0
 
     for row in rows:
         cached_rows.append(
@@ -33,7 +38,27 @@ def extracting_info(driver,random_wait_func,network_performance_func,scroll_func
         job_title = row_data["job_title"]
         link = row_data["link"]
         location = row_data["location"]
+        if not link:
+            skipped_empty_count += 1
+            continue
+        if link in seen_links:
+            print(f"Skipping duplicate link found in current page list: {link}")
+            skipped_current_list_count += 1
+            continue
         date = datetime.now().strftime("%Y-%m-%d")
+
+        # connecting to the database
+        connection = sqlite3.connect(SWRI_Path)
+        cursor = connection.cursor()
+        cursor.execute('SELECT 1 FROM "SWRI DATA" WHERE "URL" = ? LIMIT 1', (link,))
+        if cursor.fetchone():
+            print(f"Skipping already logged link: {link}")
+            connection.close()
+            seen_links.add(link)
+            skipped_db_count += 1
+            continue
+        seen_links.add(link)
+
         bandwidth = network_performance_func(driver)
 
         # waiting before clicking next link
@@ -48,10 +73,6 @@ def extracting_info(driver,random_wait_func,network_performance_func,scroll_func
         objectives = description.find_element(By.ID, "divObjectivesOfThisRole").text.replace("\n", " ")
         daily_responsibilities = description.find_element(By.ID, "divDailyAndMonthlyResponsibilities").text.replace("\n", " ")
         requirements = description.find_element(By.ID, "divSkillsAndQualifications").text.replace("\n", " ")
-
-        # connecting to the database
-        connection = sqlite3.connect(SWRI_Path)
-        cursor = connection.cursor()
 
         # storing values to the database
         sql = '''
@@ -81,6 +102,7 @@ def extracting_info(driver,random_wait_func,network_performance_func,scroll_func
                 link
             ))
             connection.commit()
+            inserted_count += 1
         except sqlite3.Error as e:
             print(f"DB error: {e}")
             print(f'we will continue to move on and log this error.')
@@ -88,6 +110,14 @@ def extracting_info(driver,random_wait_func,network_performance_func,scroll_func
         connection.close()
         # we will return to the previous page
         driver.back()
+
+    print(
+        "SWRI summary: "
+        f"inserted={inserted_count}, "
+        f"skipped_already_in_db={skipped_db_count}, "
+        f"skipped_duplicate_in_list={skipped_current_list_count}, "
+        f"skipped_empty_links={skipped_empty_count}"
+    )
 
 
 

@@ -5,8 +5,56 @@ CREATE TABLE IF NOT EXISTS 'wiki data'(
     'Page_Titles' TEXT
 );
 
-CREATE UNIQUE INDEX uc_time
-ON 'wiki data' (DATE, TIME);
+-- CREATE UNIQUE INDEX uc_time
+-- ON 'wiki data' (DATE, TIME);
+
+CREATE TABLE IF NOT EXISTS 'SWRI DATA'(
+    'ID' INTEGER PRIMARY KEY AUTOINCREMENT,
+    'JOB TITLE' TEXT,
+    'JOB CODE' TEXT, 
+    'DATE OF RETRIVAL' DATE, 
+    'NETWORK_PERFORMANCE' INTEGER, 
+    'WHO WE ARE' TEXT,
+    'OBJECTIVES OF THIS ROLE' TEXT,
+    'DAILY RESPONSIBILITIES' TEXT, 
+    'REQUIREMENTS' TEXT,
+    'LOCATION' TEXT
+);
+
+-- CREATE UNIQUE INDEX uc_SWRI
+-- ON 'SWRI DATA' ('JOB TITLE', 'JOB CODE');
+
+CREATE TABLE IF NOT EXISTS 'HEB DATA'(
+    'ID' INTEGER PRIMARY KEY AUTOINCREMENT,
+    'Job Title' TEXT,
+    'Job Code' INTEGER,
+    'Location' TEXT,
+    'Position Type' TEXT,
+    'DATE OF RETRIVAL' DATE,
+    'Posting End Date' DATE,
+    'Job Description' TEXT,
+    'URL' TEXT
+);
+
+-- CREATE UNIQUE INDEX uc_HEB
+-- on 'HEB DATA' ('Job Title','Job Code','URL')
+
+CREATE TABLE IF NOT EXISTS 'UHEALTH DATA'(
+    'ID' INTEGER PRIMARY KEY AUTOINCREMENT,
+    'JOB TITLE' TEXT,
+    'JOB CODE' TEXT,
+    'LOCATION' TEXT,
+    'DATE OF RETRIVAL' DATE,
+    'POSTING DATE' DATE,
+    'POSITION TYPE' TEXT,
+    'JOB DESCRIPTION' TEXT,
+    'BANDWIDTH' INTEGER,
+    'URL' TEXT
+
+);
+
+CREATE UNIQUE INDEX uc_UHealth
+on 'UHEALTH DATA' ('URL');
 
 -- Code Execution
 -- sqlite3 job_data.db < sql_code/table_create.sql
