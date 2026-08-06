@@ -18,6 +18,10 @@ DEFAULT_CHROME_BINARY = "/usr/bin/chromium-browser"
 DEFAULT_WINDOW_SIZE: Tuple[int, int] = (1920, 1080)
 DEFAULT_PROFILE_DIR = PROJECT_ROOT / "chrome_profile"
 
+ANSI_RESET = "\033[0m"
+ANSI_YELLOW = "\033[33m"
+ANSI_ORANGE = "\033[38;5;208m"
+
 # These are commonly managed by the browser/network stack and should not be forced.
 BLOCKED_HEADER_NAMES = {
 	"host",
@@ -153,7 +157,7 @@ def typing(input_text, section) -> None:
 
 def random_wait(min_seconds: float = 0.5, max_seconds: float = 3.0) -> None:
 	wait_time = round(random.uniform(min_seconds, max_seconds), 3)
-	print(f"Waiting {wait_time:.3f} seconds...")
+	print(f"{ANSI_YELLOW}Waiting {wait_time:.3f} seconds...{ANSI_RESET}")
 	time.sleep(wait_time)
 
 
@@ -268,10 +272,10 @@ def get_network_performance_kb(driver: webdriver.Chrome) -> int:
 			"""
 		)
 		total_kb = int(round((total_bytes or 0) / 1024))
-		print(f"Estimated network transfer for page: {total_kb} kB")
+		print(f"{ANSI_ORANGE}Estimated network transfer for page: {total_kb} kB{ANSI_RESET}")
 		return max(0, total_kb)
 	except (InvalidSessionIdException, WebDriverException, TypeError, ValueError):
-		print("Estimated network transfer for page: 0 kB")
+		print(f"{ANSI_ORANGE}Estimated network transfer for page: 0 kB{ANSI_RESET}")
 		return 0
 
 
@@ -363,7 +367,7 @@ def scroll_page(
 		step_delay_ms = 0
 		target_distance = random.randint(500, 800)
 		pixels_per_second = random.randint(3000, 4000)
-		print('Scrolling now...')
+		print(f"{ANSI_ORANGE}Scrolling now...{ANSI_RESET}")
 		_smooth_scroll(
 			driver,
 			direction=1,
@@ -468,12 +472,15 @@ if __name__ == "__main__":
 	from website_scraper.SWRI import SWRI_MAIN
 	from website_scraper.HEB import HEB_MAIN
 	from website_scraper.University_Health import Univeristy_Health_MAIN
+	from website_scraper.USAJOBS import USAJOBS_MAIN
 	driver = run_scraper("https://resapp.swri.org/ResApp/Job_Search_Results.aspx?EMPLOYMENT_STATUS=Salaried&WORK_LOCATION=San+Antonio%2c+Texas&JOB_CATEGORY=All+Categories")
 	try:
 		# SWRI_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
 		# safe_get(driver, "https://careers.heb.com/careers-home/jobs?stretchUnit=MILES&stretch=25&location=San%20Antonio,%20TX,%20United%20States&woe=7&regionCode=US&limit=10&page=1&sortBy=relevance")
 		# HEB_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
-		safe_get(driver,"https://careers.universityhealth.com/search-jobs")
-		Univeristy_Health_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
+		#safe_get(driver,"https://careers.universityhealth.com/search-jobs")
+		#Univeristy_Health_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
+		safe_get(driver, 'https://www.usajobs.gov/search/results/?l=San+Antonio%2C+Texas')
+		USAJOBS_MAIN(driver,typing_func=typing,random_wait_func=random_wait,scroll_func=scroll_page,network_performance_func=get_network_performance_kb,)
 	finally:
 		driver.quit()
